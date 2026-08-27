@@ -377,7 +377,7 @@ function DoctorAppointments({ onBack }) {
                           )
                         }
                         style={{
-                          background: '#fff',
+                          background: '#226411',
                           color: '#d93025',
                           border:
                             '1px solid #f1a5a5',

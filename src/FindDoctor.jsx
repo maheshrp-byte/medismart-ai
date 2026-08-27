@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
 
-function FindDoctor({ onBookAppointment }) {
+function FindDoctor({ onBookAppointment, onBack }) {
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -66,7 +66,7 @@ function FindDoctor({ onBookAppointment }) {
 
       <button
         className="back-button"
-        onClick={() => window.history.back()}
+        onClick={onBack}
       >
         ← Back to Dashboard
       </button>

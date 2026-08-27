@@ -5,7 +5,7 @@ import "./MedicalReports.css";
 const BUCKET_NAME = "medical report";
 const ANALYZER_FUNCTION = "medical-report-analyzer";
 
-function MedicalReports() {
+function MedicalReports({onBack}) {
   const [user, setUser] = useState(null);
   const [reports, setReports] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -709,9 +709,9 @@ function MedicalReports() {
 
         <button
           className="back-button"
-          onClick={() => window.history.back()}
+          onClick={onBack}
         >
-          ← Back
+          ← Back to dashboard
         </button>
 
 

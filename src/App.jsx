@@ -639,7 +639,9 @@ function Dashboard({ session }) {
         {/* MEDICAL REPORTS */}
 
         {activeFeature === 'reports' && (
-          <MedicalReports />
+          <MedicalReports 
+           onBack={()=> setActiveFeature('home')}
+          />
         )}
 {/* =====================================
          ADMIN PANEL
@@ -673,6 +675,7 @@ function Dashboard({ session }) {
         {activeFeature === 'doctors' && (
           <FindDoctor
             onBookAppointment={openAppointment}
+            onBack={() =>setActiveFeature('home')}
           />
         )}
 
