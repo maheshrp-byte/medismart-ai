@@ -111,15 +111,16 @@ function AuthPage({ isRegistering, setIsRegistering, theme, setTheme }) {
 
     try {
       if (isRegistering) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-          },
-        })
+       const { error } = await supabase.auth.signUp({
+         email,
+         password,
+         options: {
+           emailRedirectTo: window.location.origin,
+           data: {
+             full_name: fullName,
+           },
+         },
+       })
 
         if (error) {
           setError(error.message)
