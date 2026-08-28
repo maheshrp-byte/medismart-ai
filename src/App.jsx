@@ -11,6 +11,15 @@ function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('medismart-theme') || 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.style.colorScheme = theme
+    localStorage.setItem('medismart-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,13 +49,15 @@ function App() {
   }
 
   if (session) {
-    return <Dashboard session={session} />
+    return <Dashboard session={session} theme={theme} setTheme={setTheme} />
   }
 
   return (
     <AuthPage
       isRegistering={isRegistering}
       setIsRegistering={setIsRegistering}
+      theme={theme}
+      setTheme={setTheme}
     />
   )
 }
@@ -58,7 +69,7 @@ export default App
    AUTH PAGE
 ===================================================== */
 
-function AuthPage({ isRegistering, setIsRegistering }) {
+function AuthPage({ isRegistering, setIsRegistering, theme, setTheme }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -231,6 +242,21 @@ function AuthPage({ isRegistering, setIsRegistering }) {
             <span>MediSmart AI</span>
           </div>
 
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() =>
+              setTheme((current) =>
+                current === 'dark' ? 'light' : 'dark'
+              )
+            }
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
+         
+
           <div className="auth-heading">
 
             <h2>
@@ -372,7 +398,14 @@ function AuthPage({ isRegistering, setIsRegistering }) {
    DASHBOARD
 ===================================================== */
 
-function Dashboard({ session }) {
+function Dashboard({ session, theme, setTheme }) {
+  const [phoneNumber, setPhoneNumber] = useState(
+  session?.user?.phone ||
+  session?.user?.user_metadata?.phone ||
+  ''
+)
+
+const [editingPhone, setEditingPhone] = useState(false)
 
   const userName =
     session.user.user_metadata?.full_name ||
@@ -457,6 +490,28 @@ function Dashboard({ session }) {
 
         <div className="user-area">
 
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() =>
+              setTheme((current) =>
+                current === 'dark' ? 'light' : 'dark'
+              )
+            }
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+          <button
+            type="button"
+            className="profile-button"
+            onClick={() => setActiveFeature('profile')}
+            title="View Profile"
+          >
+            👤 Profile
+          </button>
+
           <div className="user-info">
 
             <strong>
@@ -482,7 +537,128 @@ function Dashboard({ session }) {
 
 
       <main className="dashboard-content">
+      {activeFeature === 'profile' && (
+  <section className="profile-page">
 
+    <button
+      className="back-button"
+      onClick={() => setActiveFeature('home')}
+    >
+      ← Back to Dashboard
+    </button>
+
+    <div className="profile-card">
+
+      <div className="profile-avatar">
+        👤
+      </div>
+
+      <h1>My Profile</h1>
+
+      <p className="profile-subtitle">
+        Manage your MediSmart AI account information.
+      </p>
+
+      <div className="profile-details">
+
+        <div className="profile-detail">
+          <span>Full Name</span>
+          <strong>{userName}</strong>
+        </div>
+
+        <div className="profile-detail">
+          <span>Email Address</span>
+          <strong>{session.user.email}</strong>
+        </div>
+        <div className="profile-detail">
+  <span>Phone Number</span>
+
+  {editingPhone ? (
+    <div className="phone-edit-area">
+
+      <input
+        type="tel"
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+        placeholder="Enter phone number"
+        className="phone-input"
+      />
+
+      <button
+        type="button"
+        className="save-phone-button"
+        onClick={async () => {
+          const { error } = await supabase.auth.updateUser({
+            data: {
+              phone: phoneNumber
+            }
+          })
+
+          if (error) {
+            alert(error.message)
+            return
+          }
+
+          setEditingPhone(false)
+          alert('Phone number saved successfully!')
+        }}
+      >
+        Save
+      </button>
+
+      <button
+        type="button"
+        className="cancel-phone-button"
+        onClick={() => setEditingPhone(false)}
+      >
+        Cancel
+      </button>
+
+    </div>
+  ) : (
+    <div className="phone-display-area">
+
+      <strong>
+        {phoneNumber || 'Not provided'}
+      </strong>
+
+      <button
+        type="button"
+        className="edit-phone-button"
+        onClick={() => setEditingPhone(true)}
+      >
+        Edit
+      </button>
+
+    </div>
+  )}
+</div>
+
+        <div className="profile-detail">
+          <span>Account Role</span>
+          <strong>
+            {userRole === 'admin' ? 'Administrator' : 'Patient'}
+          </strong>
+        </div>
+
+        <div className="profile-detail">
+          <span>Account Status</span>
+          <strong>Active</strong>
+        </div>
+
+      </div>
+
+      <button
+        className="profile-back-button"
+        onClick={() => setActiveFeature('home')}
+      >
+        Back to Dashboard
+      </button>
+
+    </div>
+
+  </section>
+)}
         {/* HOME */}
 
         {activeFeature === 'home' && (
@@ -1595,7 +1771,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
             {appointments.map((appointment) => {
 
               const doctor =
-                appointment.doctors
+                appointment.doctors?.[0]
 
               return (
                 <div
