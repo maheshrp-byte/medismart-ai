@@ -134,15 +134,31 @@ function AuthPage({ isRegistering, setIsRegistering, theme, setTheme }) {
           setPassword('')
           setConfirmPassword('')
         }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+     } else {
+       try {
+         const loginPromise = supabase.auth.signInWithPassword({
+           email,
+           password,
+         })
 
-        if (error) {
-          setError(error.message)
-        }
+         const timeoutPromise = new Promise((_, reject) =>
+           setTimeout(() => {
+             reject(new Error("Login is taking too long. Please check your internet connection and try again."))
+          }, 10000)
+         )
+
+          const { error } = await Promise.race([
+           loginPromise,
+           timeoutPromise,
+         ])
+
+         if (error) {
+           setError(error.message)
+         }
+       } catch (err) {
+         console.error("Login error:", err)
+         setError(err.message || "Login failed. Please try again.")
+       }
       }
     } catch (err) {
       console.error(err)
