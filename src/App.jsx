@@ -1537,27 +1537,22 @@ function HealthHistory({ session, onBack }) {
     </section>
   )
 }
-
-
 /* =====================================================
    APPOINTMENTS
 ===================================================== */
 
 function Appointments({ session, onBack, onFindDoctor }) {
-
-  const [appointments, setAppointments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const loadAppointments = async () => {
-
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
-
       const { data, error } = await supabase
-        .from('appointments')
+        .from("appointments")
         .select(`
           id,
           appointment_date,
@@ -1566,6 +1561,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
           status,
           created_at,
           doctors (
+            id,
             name,
             specialization,
             hospital,
@@ -1573,121 +1569,114 @@ function Appointments({ session, onBack, onFindDoctor }) {
             consultation_fee
           )
         `)
-        .eq('patient_id', session.user.id)
-        .order('appointment_date', {
+        .eq("patient_id", session.user.id)
+        .order("appointment_date", {
           ascending: true,
-        })
+        });
 
       if (error) {
-        throw error
+        throw error;
       }
 
-      setAppointments(data || [])
+      console.log("Appointments loaded:", data);
 
+      setAppointments(data || []);
     } catch (err) {
-
       console.error(
-        'Appointments loading error:',
+        "Appointments loading error:",
         err
-      )
+      );
 
       setError(
         err.message ||
-        'Unable to load appointments.'
-      )
-
+          "Unable to load appointments."
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
+  };
 
   useEffect(() => {
-    loadAppointments()
-  }, [])
-
+    loadAppointments();
+  }, []);
 
   const cancelAppointment = async (id) => {
-
     const confirmed = window.confirm(
-      'Are you sure you want to cancel this appointment?'
-    )
+      "Are you sure you want to cancel this appointment?"
+    );
 
     if (!confirmed) {
-      return
+      return;
     }
 
     try {
-
       const { error } = await supabase
-        .from('appointments')
+        .from("appointments")
         .update({
-          status: 'cancelled',
+          status: "cancelled",
         })
-        .eq('id', id)
-        .eq('patient_id', session.user.id)
+        .eq("id", id)
+        .eq("patient_id", session.user.id);
 
       if (error) {
-        throw error
+        throw error;
       }
 
-      loadAppointments()
-
+      await loadAppointments();
     } catch (err) {
-
-      console.error(err)
+      console.error(
+        "Cancel appointment error:",
+        err
+      );
 
       setError(
         err.message ||
-        'Unable to cancel appointment.'
-      )
+          "Unable to cancel appointment."
+      );
     }
-  }
-
+  };
 
   const formatDate = (date) => {
-    if (!date) return ''
+    if (!date) return "";
 
     return new Date(
       `${date}T00:00:00`
     ).toLocaleDateString(
       undefined,
       {
-        dateStyle: 'medium',
+        dateStyle: "medium",
       }
-    )
-  }
-
+    );
+  };
 
   const formatTime = (time) => {
-
-    if (!time) return ''
+    if (!time) return "";
 
     const [hours, minutes] =
-      time.split(':')
+      time.split(":");
 
-    const date = new Date()
+    const date = new Date();
 
     date.setHours(
       Number(hours),
       Number(minutes),
       0,
       0
-    )
+    );
 
     return date.toLocaleTimeString(
       undefined,
       {
-        hour: 'numeric',
-        minute: '2-digit',
+        hour: "numeric",
+        minute: "2-digit",
       }
-    )
-  }
-
+    );
+  };
 
   return (
     <section className="health-history">
 
+      {/* Back */}
       <button
         className="back-button"
         onClick={onBack}
@@ -1695,7 +1684,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
         ← Back to Dashboard
       </button>
 
-
+      {/* Header */}
       <div className="history-header">
 
         <div className="history-icon">
@@ -1720,20 +1709,20 @@ function Appointments({ session, onBack, onFindDoctor }) {
 
       </div>
 
-
+      {/* Error */}
       {error && (
         <div className="ai-error">
           ⚠️ {error}
         </div>
       )}
 
-
+      {/* Buttons */}
       <div
         style={{
-          display: 'flex',
-          gap: '10px',
-          marginBottom: '25px',
-          flexWrap: 'wrap',
+          display: "flex",
+          gap: "10px",
+          marginBottom: "25px",
+          flexWrap: "wrap",
         }}
       >
 
@@ -1742,7 +1731,10 @@ function Appointments({ session, onBack, onFindDoctor }) {
           onClick={loadAppointments}
           disabled={loading}
         >
-          🔄 {loading ? 'Loading...' : 'Refresh'}
+          🔄{" "}
+          {loading
+            ? "Loading..."
+            : "Refresh"}
         </button>
 
         <button
@@ -1754,7 +1746,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
 
       </div>
 
-
+      {/* Loading */}
       {loading && (
         <div className="history-empty">
 
@@ -1769,7 +1761,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
         </div>
       )}
 
-
+      {/* No appointments */}
       {!loading &&
         !error &&
         appointments.length === 0 && (
@@ -1785,7 +1777,8 @@ function Appointments({ session, onBack, onFindDoctor }) {
             </h2>
 
             <p>
-              Find a doctor and book your first appointment.
+              Find a doctor and book your first
+              appointment.
             </p>
 
             <button
@@ -1798,7 +1791,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
           </div>
         )}
 
-
+      {/* Appointments */}
       {!loading &&
         appointments.length > 0 && (
 
@@ -1806,8 +1799,20 @@ function Appointments({ session, onBack, onFindDoctor }) {
 
             {appointments.map((appointment) => {
 
+              /*
+               * IMPORTANT:
+               *
+               * doctors is an OBJECT, not an ARRAY.
+               *
+               * ❌ Wrong:
+               * appointment.doctors?.[0]
+               *
+               * ✅ Correct:
+               * appointment.doctors
+               */
+
               const doctor =
-                appointment.doctors?.[0]
+                appointment.doctors;
 
               return (
                 <div
@@ -1815,6 +1820,7 @@ function Appointments({ session, onBack, onFindDoctor }) {
                   key={appointment.id}
                 >
 
+                  {/* Appointment header */}
                   <div className="history-card-top">
 
                     <div className="history-card-icon">
@@ -1830,97 +1836,150 @@ function Appointments({ session, onBack, onFindDoctor }) {
                       </span>
 
                       <h3>
-                        {doctor?.name || 'Doctor'}
+                        {doctor?.name ||
+                          "Doctor"}
                       </h3>
 
                     </div>
 
                   </div>
 
-
+                  {/* Details */}
                   <div className="history-symptoms">
 
                     <p>
                       <strong>
                         Specialization:
-                      </strong>{' '}
-                      {doctor?.specialization || 'N/A'}
+                      </strong>{" "}
+                      {doctor?.specialization ||
+                        "N/A"}
                     </p>
 
                     <p>
                       <strong>
                         Hospital:
-                      </strong>{' '}
-                      {doctor?.hospital || 'N/A'}
+                      </strong>{" "}
+                      {doctor?.hospital ||
+                        "N/A"}
                     </p>
 
                     <p>
                       <strong>
                         Location:
-                      </strong>{' '}
-                      {doctor?.location || 'N/A'}
+                      </strong>{" "}
+                      {doctor?.location ||
+                        "N/A"}
                     </p>
 
                     <p>
                       <strong>
                         Time:
-                      </strong>{' '}
+                      </strong>{" "}
                       {formatTime(
                         appointment.appointment_time
                       )}
                     </p>
 
-                    {appointment.reason && (
-                      <p>
-                        <strong>
-                          Reason:
-                        </strong>{' '}
-                        {appointment.reason}
-                      </p>
-                    )}
+                    <p>
+                      <strong>
+                        Reason:
+                      </strong>{" "}
+                      {appointment.reason ||
+                        "Not provided"}
+                    </p>
 
                     <p>
                       <strong>
                         Status:
-                      </strong>{' '}
-                      {appointment.status}
+                      </strong>{" "}
+                      <span
+                        style={{
+                          textTransform:
+                            "capitalize",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {appointment.status}
+                      </span>
                     </p>
 
                   </div>
 
+                  {/* Cancel button */}
+                  {appointment.status !==
+                    "cancelled" &&
+                    appointment.status !==
+                      "completed" && (
 
-                  {appointment.status !== 'cancelled' &&
-                    appointment.status !== 'completed' && (
+                      <button
+                        className="history-close-main-button"
+                        onClick={() =>
+                          cancelAppointment(
+                            appointment.id
+                          )
+                        }
+                        style={{
+                          background: "#fff",
+                          color: "#d93025",
+                          border:
+                            "1px solid #f1a5a5",
+                        }}
+                      >
+                        Cancel Appointment
+                      </button>
 
-                    <button
-                      className="history-close-main-button"
-                      onClick={() =>
-                        cancelAppointment(
-                          appointment.id
-                        )
-                      }
+                    )}
+
+                  {/* Cancelled message */}
+                  {appointment.status ===
+                    "cancelled" && (
+
+                    <div
                       style={{
-                        background: '#fff',
-                        color: '#d93025',
-                        border: '1px solid #f1a5a5',
+                        marginTop: "15px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "#fff4df",
+                        color: "#b26a00",
+                        textAlign: "center",
+                        fontWeight: "600",
                       }}
                     >
-                      Cancel Appointment
-                    </button>
+                      🟠 Appointment Cancelled
+                    </div>
+
+                  )}
+
+                  {/* Completed message */}
+                  {appointment.status ===
+                    "completed" && (
+
+                    <div
+                      style={{
+                        marginTop: "15px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "#e8f8ef",
+                        color: "#087f46",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    >
+                      ✅ Appointment Completed
+                    </div>
 
                   )}
 
                 </div>
-              )
+              );
             })}
 
           </div>
         )}
 
     </section>
-  )
+  );
 }
-
 
 /* =====================================================
    DASHBOARD CARD
