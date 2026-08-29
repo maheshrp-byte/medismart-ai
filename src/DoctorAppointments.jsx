@@ -1,20 +1,26 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabaseClient'
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabaseClient";
 
 function DoctorAppointments({ onBack }) {
-  const [appointments, setAppointments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   async function loadAppointments() {
-    setLoading(true)
-    setError('')
-    setMessage('')
+    setLoading(true);
+    setError("");
+    setMessage("");
 
     try {
-      const { data, error } = await supabase
-        .from('appointments')
+      // -----------------------------------------
+      // 1. Get appointments
+      // -----------------------------------------
+      const {
+        data: appointmentData,
+        error: appointmentError,
+      } = await supabase
+        .from("appointments")
         .select(`
           id,
           patient_id,
@@ -23,111 +29,280 @@ function DoctorAppointments({ onBack }) {
           appointment_time,
           reason,
           status,
-          created_at,
-          doctors (
+          created_at
+        `)
+        .order("appointment_date", {
+          ascending: true,
+        });
+
+      if (appointmentError) {
+        throw appointmentError;
+      }
+
+      const appointmentsList = appointmentData || [];
+
+      // -----------------------------------------
+      // 2. Get unique doctor IDs
+      // -----------------------------------------
+      const doctorIds = [
+        ...new Set(
+          appointmentsList
+            .map((appointment) => appointment.doctor_id)
+            .filter((id) => id !== null && id !== undefined)
+        ),
+      ];
+
+      // -----------------------------------------
+      // 3. Get doctors directly from doctors table
+      // -----------------------------------------
+      let doctorsList = [];
+
+      if (doctorIds.length > 0) {
+        const {
+          data: doctorData,
+          error: doctorError,
+        } = await supabase
+          .from("doctors")
+          .select(`
+            id,
             name,
             specialization,
             hospital,
-            location
-          )
-        `)
-        .order('appointment_date', {
-          ascending: true,
-        })
+            location,
+            consultation_fee
+          `)
+          .in("id", doctorIds);
 
-      if (error) {
-        throw error
+        if (doctorError) {
+          throw doctorError;
+        }
+
+        doctorsList = doctorData || [];
       }
 
-      setAppointments(data || [])
+      // -----------------------------------------
+      // 4. Create doctor lookup
+      // -----------------------------------------
+      const doctorMap = {};
+
+      doctorsList.forEach((doctor) => {
+        doctorMap[String(doctor.id)] = doctor;
+      });
+
+      // -----------------------------------------
+      // 5. Attach doctor information to appointment
+      // -----------------------------------------
+      const finalAppointments = appointmentsList.map((appointment) => {
+        const doctor = doctorMap[String(appointment.doctor_id)] || null;
+
+        return {
+          ...appointment,
+          doctor,
+        };
+      });
+
+      setAppointments(finalAppointments);
     } catch (err) {
-      console.error('Appointment loading error:', err)
+      console.error("Appointment loading error:", err);
 
       setError(
-        err.message ||
-        'Unable to load appointments.'
-      )
+        err.message || "Unable to load appointments."
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
+  // -----------------------------------------
+  // Load appointments when page opens
+  // -----------------------------------------
   useEffect(() => {
-    loadAppointments()
-  }, [])
+    loadAppointments();
+  }, []);
 
+  // -----------------------------------------
+  // Update appointment status
+  // -----------------------------------------
   async function updateStatus(id, status) {
-    setError('')
-    setMessage('')
+    setError("");
+    setMessage("");
 
     try {
-      const { error } = await supabase
-        .from('appointments')
+      const { error: updateError } = await supabase
+        .from("appointments")
         .update({
-          status,
+          status: status,
         })
-        .eq('id', id)
+        .eq("id", id);
 
-      if (error) {
-        throw error
+      if (updateError) {
+        throw updateError;
       }
 
-      setMessage(
-        status === 'confirmed'
-          ? '✅ Appointment confirmed successfully.'
-          : '❌ Appointment rejected successfully.'
-      )
+      if (status === "confirmed") {
+        setMessage(
+          "✅ Appointment confirmed successfully."
+        );
+      } else if (status === "rejected") {
+        setMessage(
+          "❌ Appointment rejected successfully."
+        );
+      }
 
-      await loadAppointments()
+      await loadAppointments();
     } catch (err) {
-      console.error('Status update error:', err)
+      console.error("Status update error:", err);
 
       setError(
         err.message ||
-        'Unable to update appointment status.'
-      )
+          "Unable to update appointment status."
+      );
     }
   }
 
+  // -----------------------------------------
+  // Format date
+  // -----------------------------------------
   function formatDate(date) {
-    if (!date) return 'N/A'
+    if (!date) return "N/A";
 
     return new Date(
       `${date}T00:00:00`
-    ).toLocaleDateString(
-      undefined,
-      {
-        dateStyle: 'medium',
-      }
-    )
+    ).toLocaleDateString(undefined, {
+      dateStyle: "medium",
+    });
   }
 
+  // -----------------------------------------
+  // Format time
+  // -----------------------------------------
   function formatTime(time) {
-    if (!time) return 'N/A'
+    if (!time) return "N/A";
 
-    const [hours, minutes] = time.split(':')
+    const [hours, minutes] = time.split(":");
 
-    const date = new Date()
+    const date = new Date();
 
     date.setHours(
       Number(hours),
       Number(minutes),
       0,
       0
-    )
+    );
 
-    return date.toLocaleTimeString(
-      undefined,
-      {
-        hour: 'numeric',
-        minute: '2-digit',
-      }
-    )
+    return date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   }
 
+  // -----------------------------------------
+  // Status color
+  // -----------------------------------------
+  function getStatusStyle(status) {
+    if (status === "confirmed") {
+      return {
+        color: "#087f46",
+        background: "#e8f8ef",
+        padding: "4px 10px",
+        borderRadius: "20px",
+      };
+    }
+
+    if (status === "rejected") {
+      return {
+        color: "#c62828",
+        background: "#fff0f0",
+        padding: "4px 10px",
+        borderRadius: "20px",
+      };
+    }
+
+    if (status === "cancelled") {
+      return {
+        color: "#b26a00",
+        background: "#fff4df",
+        padding: "4px 10px",
+        borderRadius: "20px",
+      };
+    }
+
+    return {
+      color: "#8a5a00",
+      background: "#fff8dc",
+      padding: "4px 10px",
+      borderRadius: "20px",
+    };
+  }
+
+  // -----------------------------------------
+  // No doctor information
+  // -----------------------------------------
+  function DoctorInformation({ doctor }) {
+    if (!doctor) {
+      return (
+        <>
+          <h3>Doctor information unavailable</h3>
+
+          <p>
+            <strong>Doctor ID:</strong>{" "}
+            Not found
+          </p>
+
+          <p>
+            <strong>Specialization:</strong> N/A
+          </p>
+
+          <p>
+            <strong>Hospital:</strong> N/A
+          </p>
+
+          <p>
+            <strong>Location:</strong> N/A
+          </p>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h3>
+          {doctor.name || "Doctor"}
+        </h3>
+
+        <p>
+          <strong>Specialization:</strong>{" "}
+          {doctor.specialization || "N/A"}
+        </p>
+
+        <p>
+          <strong>Hospital:</strong>{" "}
+          {doctor.hospital || "N/A"}
+        </p>
+
+        <p>
+          <strong>Location:</strong>{" "}
+          {doctor.location || "N/A"}
+        </p>
+
+        {doctor.consultation_fee !== null &&
+          doctor.consultation_fee !== undefined && (
+            <p>
+              <strong>Consultation Fee:</strong>{" "}
+              ₹{doctor.consultation_fee}
+            </p>
+          )}
+      </>
+    );
+  }
+
+  // -----------------------------------------
+  // Page
+  // -----------------------------------------
   return (
     <section className="health-history">
 
+      {/* Back button */}
       <button
         className="back-button"
         onClick={onBack}
@@ -135,6 +310,7 @@ function DoctorAppointments({ onBack }) {
         ← Back to Dashboard
       </button>
 
+      {/* Header */}
       <div className="history-header">
 
         <div className="history-icon">
@@ -142,7 +318,6 @@ function DoctorAppointments({ onBack }) {
         </div>
 
         <div>
-
           <span className="dashboard-label">
             MEDISMART AI
           </span>
@@ -154,45 +329,49 @@ function DoctorAppointments({ onBack }) {
           <p>
             Review and manage patient appointments.
           </p>
-
         </div>
 
       </div>
 
+      {/* Disclaimer */}
       <div className="ai-disclaimer">
         ⚠️ Appointment information is confidential.
         Only authorized healthcare staff should access
         and manage patient appointments.
       </div>
 
+      {/* Error */}
       {error && (
         <div className="ai-error">
           ⚠️ {error}
         </div>
       )}
 
+      {/* Success message */}
       {message && (
         <div
           style={{
-            padding: '15px',
-            marginBottom: '20px',
-            borderRadius: '10px',
-            background: '#e8f8ef',
-            color: '#087f46',
-            textAlign: 'center',
+            padding: "15px",
+            marginBottom: "20px",
+            borderRadius: "10px",
+            background: "#e8f8ef",
+            color: "#087f46",
+            textAlign: "center",
+            fontWeight: "600",
           }}
         >
           {message}
         </div>
       )}
 
+      {/* Toolbar */}
       <div className="history-toolbar">
 
         <strong>
-          {appointments.length}{' '}
+          {appointments.length}{" "}
           {appointments.length === 1
-            ? 'appointment'
-            : 'appointments'}
+            ? "appointment"
+            : "appointments"}
         </strong>
 
         <button
@@ -200,11 +379,15 @@ function DoctorAppointments({ onBack }) {
           onClick={loadAppointments}
           disabled={loading}
         >
-          🔄 {loading ? 'Loading...' : 'Refresh'}
+          🔄{" "}
+          {loading
+            ? "Loading..."
+            : "Refresh"}
         </button>
 
       </div>
 
+      {/* Loading */}
       {loading && (
         <div className="history-empty">
 
@@ -219,10 +402,10 @@ function DoctorAppointments({ onBack }) {
         </div>
       )}
 
+      {/* No appointments */}
       {!loading &&
         !error &&
         appointments.length === 0 && (
-
           <div className="history-empty">
 
             <div className="history-loading-icon">
@@ -240,6 +423,7 @@ function DoctorAppointments({ onBack }) {
           </div>
         )}
 
+      {/* Appointment list */}
       {!loading &&
         appointments.length > 0 && (
 
@@ -248,7 +432,7 @@ function DoctorAppointments({ onBack }) {
             {appointments.map((appointment) => {
 
               const doctor =
-                appointment.doctors
+                appointment.doctor;
 
               return (
                 <div
@@ -256,6 +440,7 @@ function DoctorAppointments({ onBack }) {
                   key={appointment.id}
                 >
 
+                  {/* Top */}
                   <div className="history-card-top">
 
                     <div className="history-card-icon">
@@ -271,40 +456,25 @@ function DoctorAppointments({ onBack }) {
                       </span>
 
                       <h3>
-                        {doctor?.name || 'Doctor'}
+                        {doctor?.name ||
+                          "Doctor"}
                       </h3>
 
                     </div>
 
                   </div>
 
+                  {/* Details */}
                   <div className="history-symptoms">
 
-                    <p>
-                      <strong>
-                        Specialization:
-                      </strong>{' '}
-                      {doctor?.specialization || 'N/A'}
-                    </p>
-
-                    <p>
-                      <strong>
-                        Hospital:
-                      </strong>{' '}
-                      {doctor?.hospital || 'N/A'}
-                    </p>
-
-                    <p>
-                      <strong>
-                        Location:
-                      </strong>{' '}
-                      {doctor?.location || 'N/A'}
-                    </p>
+                    <DoctorInformation
+                      doctor={doctor}
+                    />
 
                     <p>
                       <strong>
                         Date:
-                      </strong>{' '}
+                      </strong>{" "}
                       {formatDate(
                         appointment.appointment_date
                       )}
@@ -313,7 +483,7 @@ function DoctorAppointments({ onBack }) {
                     <p>
                       <strong>
                         Time:
-                      </strong>{' '}
+                      </strong>{" "}
                       {formatTime(
                         appointment.appointment_time
                       )}
@@ -322,37 +492,43 @@ function DoctorAppointments({ onBack }) {
                     <p>
                       <strong>
                         Reason:
-                      </strong>{' '}
+                      </strong>{" "}
                       {appointment.reason ||
-                        'Not provided'}
+                        "Not provided"}
                     </p>
 
                     <p>
                       <strong>
                         Status:
-                      </strong>{' '}
+                      </strong>{" "}
 
                       <span
                         style={{
-                          fontWeight: '700',
-                          textTransform: 'capitalize',
+                          ...getStatusStyle(
+                            appointment.status
+                          ),
+                          fontWeight: "700",
+                          textTransform:
+                            "capitalize",
                         }}
                       >
-                        {appointment.status}
+                        {appointment.status ||
+                          "pending"}
                       </span>
-
                     </p>
 
                   </div>
 
-                  {appointment.status === 'pending' && (
+                  {/* Pending buttons */}
+                  {appointment.status ===
+                    "pending" && (
 
                     <div
                       style={{
-                        display: 'flex',
-                        gap: '10px',
-                        flexWrap: 'wrap',
-                        marginTop: '15px',
+                        display: "flex",
+                        gap: "10px",
+                        flexWrap: "wrap",
+                        marginTop: "15px",
                       }}
                     >
 
@@ -361,7 +537,7 @@ function DoctorAppointments({ onBack }) {
                         onClick={() =>
                           updateStatus(
                             appointment.id,
-                            'confirmed'
+                            "confirmed"
                           )
                         }
                       >
@@ -373,14 +549,14 @@ function DoctorAppointments({ onBack }) {
                         onClick={() =>
                           updateStatus(
                             appointment.id,
-                            'rejected'
+                            "rejected"
                           )
                         }
                         style={{
-                          background: '#226411',
-                          color: '#d93025',
+                          background: "#fff0f0",
+                          color: "#d93025",
                           border:
-                            '1px solid #f1a5a5',
+                            "1px solid #f1a5a5",
                         }}
                       >
                         ❌ Reject
@@ -390,47 +566,76 @@ function DoctorAppointments({ onBack }) {
 
                   )}
 
-                  {appointment.status === 'confirmed' && (
+                  {/* Confirmed */}
+                  {appointment.status ===
+                    "confirmed" && (
+
                     <div
                       style={{
-                        marginTop: '15px',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        background: '#e8f8ef',
-                        color: '#087f46',
-                        textAlign: 'center',
-                        fontWeight: '600',
+                        marginTop: "15px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "#e8f8ef",
+                        color: "#087f46",
+                        textAlign: "center",
+                        fontWeight: "600",
                       }}
                     >
                       🟢 Appointment Confirmed
                     </div>
+
                   )}
 
-                  {appointment.status === 'rejected' && (
+                  {/* Rejected */}
+                  {appointment.status ===
+                    "rejected" && (
+
                     <div
                       style={{
-                        marginTop: '15px',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        background: '#fff0f0',
-                        color: '#c62828',
-                        textAlign: 'center',
-                        fontWeight: '600',
+                        marginTop: "15px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "#fff0f0",
+                        color: "#c62828",
+                        textAlign: "center",
+                        fontWeight: "600",
                       }}
                     >
                       🔴 Appointment Rejected
                     </div>
+
+                  )}
+
+                  {/* Cancelled */}
+                  {appointment.status ===
+                    "cancelled" && (
+
+                    <div
+                      style={{
+                        marginTop: "15px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "#fff4df",
+                        color: "#b26a00",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    >
+                      🟠 Appointment Cancelled
+                    </div>
+
                   )}
 
                 </div>
-              )
+              );
             })}
 
           </div>
+
         )}
 
     </section>
-  )
+  );
 }
 
-export default DoctorAppointments
+export default DoctorAppointments;
