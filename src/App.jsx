@@ -766,26 +766,45 @@ const [editingPhone, setEditingPhone] = useState(false)
             </section>
 
 
-            <section className="coming-soon">
+           <section
+             className="coming-soon clickable"
+             onClick={() => setActiveFeature('ai')}
+             role="button"
+             tabIndex={0}
+             onKeyDown={(e) => {
+               if (e.key === 'Enter' || e.key === ' ') {
+                  setActiveFeature('ai')
+               }
+             }}
+           >
 
-              <div className="coming-icon">
-                🚀
-              </div>
+            <div className="coming-icon">
+             🚀
+            </div>
 
-              <div>
+            <div>
+             <h2>
+                Your Smart Healthcare Journey
+             </h2>
 
-                <h2>
-                  Your Smart Healthcare Journey
-                </h2>
+             <p>
+               Start with our AI Health Assistant and explore
+               smarter healthcare tools.
+             </p>
 
-                <p>
-                  Start with our AI Health Assistant and explore
-                  smarter healthcare tools.
-                </p>
+             <button
+               className="journey-button"
+               onClick={(e) => {
+                 e.stopPropagation()
+                 setActiveFeature('ai')
+               }}
+             >
+               Start with AI →
+             </button>
 
-              </div>
+            </div>
 
-            </section>
+          </section>
 
 
             <div className="dashboard-disclaimer">

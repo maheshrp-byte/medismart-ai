@@ -723,7 +723,7 @@ function AdminPanel({ onBack }) {
 
         <div
           style={{
-            background: '#e8f8ef',
+            background: '#237647',
             padding: '20px',
             borderRadius: '12px',
             textAlign: 'center',
@@ -749,7 +749,7 @@ function AdminPanel({ onBack }) {
 
         <div
           style={{
-            background: '#fff7df',
+            background: '#17134c',
             padding: '20px',
             borderRadius: '12px',
             textAlign: 'center',
@@ -775,7 +775,7 @@ function AdminPanel({ onBack }) {
 
         <div
           style={{
-            background: '#fff0f0',
+            background: '#191431',
             padding: '20px',
             borderRadius: '12px',
             textAlign: 'center',
@@ -804,7 +804,7 @@ function AdminPanel({ onBack }) {
       {message && (
         <div
           style={{
-            background: '#e8f8ef',
+            background: '#0d0f3c',
             color: '#087f45',
             padding: '15px',
             borderRadius: '10px',
@@ -822,7 +822,7 @@ function AdminPanel({ onBack }) {
       {error && (
         <div
           style={{
-            background: '#fff0f0',
+            background: '#15164a',
             color: '#d22',
             padding: '15px',
             borderRadius: '10px',
@@ -1201,8 +1201,8 @@ function AdminPanel({ onBack }) {
                         borderRadius: '20px',
                         background:
                           doctor.available
-                            ? '#dff7e9'
-                            : '#ffe5e5',
+                            ? '#121743'
+                            : '#101644',
                         color:
                           doctor.available
                             ? '#087f45'
@@ -1234,7 +1234,7 @@ function AdminPanel({ onBack }) {
                         padding: '10px',
                         border: 'none',
                         background:
-                          '#e8f1ff',
+                          '#284779',
                         cursor: 'pointer'
                       }}
                     >
@@ -1251,7 +1251,7 @@ function AdminPanel({ onBack }) {
                         padding: '10px',
                         border: 'none',
                         background:
-                          '#fff5d9',
+                          '#232d71',
                         cursor: 'pointer'
                       }}
                     >

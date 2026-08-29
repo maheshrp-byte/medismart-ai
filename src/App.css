@@ -635,7 +635,7 @@ html.dark .dashboard-card:hover {
 
   border-radius: 14px;
 
-  background: #eef7f6;
+  background: #4cbdb0;
 
   font-size: 23px;
 }
@@ -679,74 +679,55 @@ html.dark .card-icon {
   font-size: 11px;
 }
 
-
-/* =========================================================
-   COMING SOON
-========================================================= */
+/* =====================================================
+   SMART HEALTHCARE JOURNEY
+===================================================== */
 
 .coming-soon {
-  margin-top: 25px;
-
-  padding: 25px;
+  width: 85%;
+  margin-top: 40px;
+  padding: 35px 45px;
+  box-sizing: border-box;
 
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 30px;
 
-  background: #eaf8f6;
+  background: #eaf8f7;
+  border: 1px solid #b9d7d5;
+  border-radius: 24px;
 
-  border: 1px solid #ccece7;
-
-  border-radius: 16px;
-}
-
-html.dark .coming-soon {
-  background: rgba(13, 148, 136, 0.12);
-  border-color: rgba(45, 212, 191, 0.25);
+  text-align: left;
 }
 
 .coming-icon {
-  font-size: 32px;
+  width: 65px;
+  height: 65px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 42px;
+  flex-shrink: 0;
 }
 
 .coming-soon h2 {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
 
-  font-size: 20px;
+  font-size: 28px;
+  font-weight: 700;
 
-  color: var(--text-h);
+  color: #111827;
 }
 
 .coming-soon p {
   margin: 0;
 
-  color: var(--text);
-
-  font-size: 13px;
-}
-
-.dashboard-disclaimer {
-  margin-top: 25px;
-
-  padding: 15px;
-
-  background: #fff9e9;
-
-  border: 1px solid #f3e2a6;
-
-  border-radius: 10px;
-
-  color: #75652e;
-
-  font-size: 11px;
-
+  font-size: 18px;
   line-height: 1.6;
-}
 
-html.dark .dashboard-disclaimer {
-  background: rgba(120, 53, 15, 0.25);
-  border-color: rgba(251, 191, 36, 0.25);
-  color: #fcd34d;
+  color: #475569;
 }
 
 
@@ -1657,8 +1638,12 @@ select:focus {
 .ai-disclaimer,
 .dashboard-disclaimer {
   background: var(--app-surface-2) !important;
-  color: var(--app-text-secondary) !important;
-  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+  border: 1px solid var(--app-border) !important;
+}
+
+.dashboard-disclaimer strong {
+  color: var(--app-text) !important;
 }
 
 .ai-error,
@@ -2147,4 +2132,183 @@ select:focus {
     width: 100%;
     box-sizing: border-box;
   }
+}
+/* =====================================================
+   SMART HEALTHCARE JOURNEY - DARK MODE
+===================================================== */
+
+.dark .coming-soon {
+  background: #040431;
+  border-color: #35515a;
+}
+
+.dark .coming-soon h2 {
+  color: #e11111;
+}
+
+.dark .coming-soon p {
+  color: #136fe0;
+}
+/* =====================================================
+   FINAL DARK MODE FIX
+   SMART HEALTHCARE JOURNEY
+===================================================== */
+
+/* Normal / Light Mode */
+.coming-soon {
+  background: #327d76 !important;
+  border: 1px solid #b9d7d5 !important;
+}
+
+.coming-soon h2 {
+  color: #c81515 !important;
+}
+
+.coming-soon p {
+  color: #c30d1f !important;
+}
+
+
+/* =====================================================
+   DARK MODE
+   Supports the different possible theme selectors
+===================================================== */
+
+.dark .coming-soon,
+.dark-mode .coming-soon,
+body.dark .coming-soon,
+body.dark-mode .coming-soon,
+html.dark .coming-soon,
+html.dark-mode .coming-soon,
+#root.dark .coming-soon,
+#root.dark-mode .coming-soon {
+  background: #6a81b6 !important;
+  border: 1px solid #344154 !important;
+}
+
+
+/* DARK MODE HEADING */
+
+.dark .coming-soon h2,
+.dark-mode .coming-soon h2,
+body.dark .coming-soon h2,
+body.dark-mode .coming-soon h2,
+html.dark .coming-soon h2,
+html.dark-mode .coming-soon h2,
+#root.dark .coming-soon h2,
+#root.dark-mode .coming-soon h2 {
+  color: #ffffff !important;
+}
+
+
+/* DARK MODE DESCRIPTION */
+
+.dark .coming-soon p,
+.dark-mode .coming-soon p,
+body.dark .coming-soon p,
+body.dark-mode .coming-soon p,
+html.dark .coming-soon p,
+html.dark-mode .coming-soon p,
+#root.dark .coming-soon p,
+#root.dark-mode .coming-soon p {
+  color: #cbd5e1 !important;
+}
+
+
+/* =====================================================
+   MEDICAL DISCLAIMER
+===================================================== */
+
+.dashboard-disclaimer {
+  background: #202a38 !important;
+  border: 1px solid #01010279 !important;
+  color: #0d4cccd6 !important;
+}
+
+.dashboard-disclaimer strong {
+  color: #d71f1f !important;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .coming-soon {
+    padding: 25px 20px !important;
+    width:94%;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .coming-soon h2 {
+    
+    font-size: 22px !important;
+  }
+
+  .coming-soon p {
+    font-size: 15px !important;
+  }
+
+}
+/* =====================================================
+   SMART HEALTHCARE JOURNEY - CLICKABLE
+===================================================== */
+
+.coming-soon.clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.coming-soon.clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(44, 33, 139, 0.25);
+}
+
+
+/* AI START BUTTON */
+
+.journey-button {
+  margin-top: 18px;
+  padding: 12px 22px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #2c4684;
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.journey-button:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+
+/* DARK MODE */
+
+.dark .journey-button {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+
+  .journey-button {
+    margin-top: 15px;
+    padding: 10px 18px;
+  }
+
 }
