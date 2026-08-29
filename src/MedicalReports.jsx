@@ -5,7 +5,7 @@ import "./MedicalReports.css";
 const BUCKET_NAME = "medical report";
 const ANALYZER_FUNCTION = "medical-report-analyzer";
 
-function MedicalReports({onBack}) {
+function MedicalReports({ onBack }) {
   const [user, setUser] = useState(null);
   const [reports, setReports] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -17,8 +17,6 @@ function MedicalReports({onBack}) {
   const [error, setError] = useState("");
 
   const [analyzingReportId, setAnalyzingReportId] = useState(null);
-
-  // NEW: selected report for full AI analysis
   const [selectedAnalysis, setSelectedAnalysis] = useState(null);
 
   useEffect(() => {
@@ -619,80 +617,346 @@ function MedicalReports({onBack}) {
   // FORMAT AI TEXT
   // =========================================================
 
-  function renderAIText(text) {
+  function renderInlineText(text) {
     if (!text) {
       return null;
     }
 
-    return text.split("\n").map(
-      (line, index) => {
-        const trimmed = line.trim();
+    const parts = text.split(
+      /(\*\*[^*]+\*\*|\*[^*]+\*)/g
+    );
 
-        if (!trimmed) {
-          return (
-            <div
-              key={index}
-              style={{
-                height: "10px",
-              }}
-            />
-          );
-        }
-
-        const isHeading =
-          /^(\d+[\.\)]|#+)\s/.test(trimmed) ||
-          /^(Report overview|Important findings|Values that may need attention|Simple explanation|What to discuss with your doctor|Important warning signs|Disclaimer)/i.test(
-            trimmed
-          );
-
-        if (isHeading) {
-          return (
-            <h3
-              key={index}
-              style={{
-                marginTop: "20px",
-                marginBottom: "8px",
-              }}
-            >
-              {trimmed.replace(/^#+\s*/, "")}
-            </h3>
-          );
-        }
-
-        if (
-          trimmed.startsWith("- ") ||
-          trimmed.startsWith("* ") ||
-          trimmed.startsWith("• ")
-        ) {
-          return (
-            <div
-              key={index}
-              style={{
-                marginBottom: "7px",
-                paddingLeft: "10px",
-              }}
-            >
-              •{" "}
-              {trimmed.replace(
-                /^[-*•]\s*/,
-                ""
-              )}
-            </div>
-          );
-        }
-
+    return parts.map((part, index) => {
+      if (
+        part.startsWith("**") &&
+        part.endsWith("**")
+      ) {
         return (
-          <p
-            key={index}
-            style={{
-              margin: "0 0 9px 0",
-              lineHeight: "1.65",
-            }}
-          >
-            {trimmed}
-          </p>
+          <strong key={index}>
+            {part.slice(2, -2)}
+          </strong>
         );
       }
+
+      if (
+        part.startsWith("*") &&
+        part.endsWith("*")
+      ) {
+        return (
+          <em key={index}>
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+
+      return (
+        <span key={index}>
+          {part}
+        </span>
+      );
+    });
+  }
+
+  function getHeadingInfo(text) {
+    const cleaned = text
+      .replace(/^#+\s*/, "")
+      .replace(/^\d+[\.\)]\s*/, "")
+      .trim();
+
+    const headingPatterns = [
+      "report overview",
+      "overview",
+      "summary",
+      "executive summary",
+      "important findings",
+      "key findings",
+      "findings",
+      "test results",
+      "lab results",
+      "results",
+      "values that may need attention",
+      "abnormal values",
+      "abnormal results",
+      "results needing attention",
+      "simple explanation",
+      "explanation",
+      "what this means",
+      "what to discuss with your doctor",
+      "doctor discussion",
+      "recommendations",
+      "recommendation",
+      "important warning signs",
+      "warning signs",
+      "when to seek medical help",
+      "next steps",
+      "disclaimer",
+    ];
+
+    const normalized = cleaned
+      .replace(/:$/, "")
+      .toLowerCase();
+
+    const matched = headingPatterns.some(
+      (heading) =>
+        normalized === heading
+    );
+
+    if (matched) {
+      return cleaned.replace(/:$/, "");
+    }
+
+    return null;
+  }
+
+  function renderAIText(text) {
+    if (!text) {
+      return (
+        <div className="analysis-empty">
+          No AI analysis is available.
+        </div>
+      );
+    }
+
+    const lines = text
+      .replace(/\r\n/g, "\n")
+      .split("\n");
+
+    const elements = [];
+
+    let bulletItems = [];
+    let numberedItems = [];
+
+    const flushBullets = () => {
+      if (bulletItems.length === 0) {
+        return;
+      }
+
+      elements.push(
+        <ul
+          className="analysis-bullet-list"
+          key={`bullets-${elements.length}`}
+        >
+          {bulletItems.map((item, index) => (
+            <li key={index}>
+              {renderInlineText(item)}
+            </li>
+          ))}
+        </ul>
+      );
+
+      bulletItems = [];
+    };
+
+    const flushNumbers = () => {
+      if (numberedItems.length === 0) {
+        return;
+      }
+
+      elements.push(
+        <ol
+          className="analysis-number-list"
+          key={`numbers-${elements.length}`}
+        >
+          {numberedItems.map((item, index) => (
+            <li key={index}>
+              {renderInlineText(item)}
+            </li>
+          ))}
+        </ol>
+      );
+
+      numberedItems = [];
+    };
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Markdown heading
+      // -------------------------------------------------------
+
+      if (/^#{1,6}\s+/.test(trimmed)) {
+        flushBullets();
+        flushNumbers();
+
+        const heading = trimmed
+          .replace(/^#{1,6}\s+/, "")
+          .trim();
+
+        elements.push(
+          <div
+            className="analysis-section-title"
+            key={`heading-${index}`}
+          >
+            <span className="analysis-section-line"></span>
+            <h3>
+              {renderInlineText(
+                heading.replace(/:$/, "")
+              )}
+            </h3>
+          </div>
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Numbered heading
+      // Example: 1. Report Overview
+      // -------------------------------------------------------
+
+      if (
+        /^\d+[\.\)]\s+[A-Za-z][^:]{2,80}:?$/.test(
+          trimmed
+        )
+      ) {
+        flushBullets();
+        flushNumbers();
+
+        const heading = trimmed
+          .replace(
+            /^\d+[\.\)]\s+/,
+            ""
+          )
+          .replace(/:$/, "")
+          .trim();
+
+        const knownHeading =
+          getHeadingInfo(trimmed);
+
+        if (knownHeading || heading.length < 70) {
+          elements.push(
+            <div
+              className="analysis-section-title"
+              key={`number-heading-${index}`}
+            >
+              <span className="analysis-section-line"></span>
+              <h3>
+                {renderInlineText(heading)}
+              </h3>
+            </div>
+          );
+
+          return;
+        }
+      }
+
+      // -------------------------------------------------------
+      // Known heading without markdown
+      // -------------------------------------------------------
+
+      const knownHeading =
+        getHeadingInfo(trimmed);
+
+      if (knownHeading) {
+        flushBullets();
+        flushNumbers();
+
+        elements.push(
+          <div
+            className="analysis-section-title"
+            key={`known-heading-${index}`}
+          >
+            <span className="analysis-section-line"></span>
+            <h3>
+              {renderInlineText(knownHeading)}
+            </h3>
+          </div>
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Bullet points
+      // -------------------------------------------------------
+
+      if (
+        /^[-*•]\s+/.test(trimmed)
+      ) {
+        flushNumbers();
+
+        bulletItems.push(
+          trimmed.replace(
+            /^[-*•]\s+/,
+            ""
+          )
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Numbered list
+      // -------------------------------------------------------
+
+      if (
+        /^\d+[\.\)]\s+/.test(trimmed)
+      ) {
+        flushBullets();
+
+        numberedItems.push(
+          trimmed.replace(
+            /^\d+[\.\)]\s+/,
+            ""
+          )
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Important / warning lines
+      // -------------------------------------------------------
+
+      if (
+        /^(⚠️|warning:|important:)/i.test(
+          trimmed
+        )
+      ) {
+        flushBullets();
+        flushNumbers();
+
+        elements.push(
+          <div
+            className="analysis-warning"
+            key={`warning-${index}`}
+          >
+            {renderInlineText(trimmed)}
+          </div>
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------
+      // Normal paragraph
+      // -------------------------------------------------------
+
+      flushBullets();
+      flushNumbers();
+
+      elements.push(
+        <p
+          className="analysis-paragraph"
+          key={`paragraph-${index}`}
+        >
+          {renderInlineText(trimmed)}
+        </p>
+      );
+    });
+
+    flushBullets();
+    flushNumbers();
+
+    return (
+      <div className="analysis-content">
+        {elements}
+      </div>
     );
   }
 
@@ -713,7 +977,6 @@ function MedicalReports({onBack}) {
         >
           ← Back to dashboard
         </button>
-
 
         {/* HEADER */}
 
@@ -742,31 +1005,51 @@ function MedicalReports({onBack}) {
 
         </div>
 
-
         {/* DISCLAIMER */}
 
         <div className="medical-disclaimer">
 
-          ⚠️ Medical reports may contain sensitive
-          information. MediSmart AI provides
-          informational assistance and does not
-          replace professional medical advice.
+          <span className="disclaimer-icon">
+            ⚠️
+          </span>
+
+          <div>
+            <strong>
+              Medical Information Notice
+            </strong>
+
+            <p>
+              Medical reports may contain sensitive
+              information. MediSmart AI provides
+              informational assistance and does not
+              replace professional medical advice.
+            </p>
+          </div>
 
         </div>
-
 
         {/* UPLOAD */}
 
         <section className="upload-card">
 
-          <h2>
-            Upload Medical Report
-          </h2>
+          <div className="card-heading">
 
-          <p className="upload-description">
-            Supported formats: PDF, JPG, PNG and WEBP.
-            Maximum size: 10 MB.
-          </p>
+            <div className="card-heading-icon">
+              📤
+            </div>
+
+            <div>
+              <h2>
+                Upload Medical Report
+              </h2>
+
+              <p className="upload-description">
+                Upload a report and let MediSmart AI
+                explain the important information.
+              </p>
+            </div>
+
+          </div>
 
           <div className="file-input-wrapper">
 
@@ -779,14 +1062,18 @@ function MedicalReports({onBack}) {
 
           </div>
 
+          <p className="file-help">
+            Supported formats: PDF, JPG, PNG and WEBP
+            · Maximum size: 10 MB
+          </p>
 
           {selectedFile && (
 
             <div className="selected-file">
 
-              <span>
+              <div className="selected-file-icon">
                 📎
-              </span>
+              </div>
 
               <div>
 
@@ -806,7 +1093,6 @@ function MedicalReports({onBack}) {
 
           )}
 
-
           {error && (
 
             <div className="error-message">
@@ -814,7 +1100,6 @@ function MedicalReports({onBack}) {
             </div>
 
           )}
-
 
           {message && (
 
@@ -824,7 +1109,6 @@ function MedicalReports({onBack}) {
 
           )}
 
-
           <button
             className="upload-button"
             onClick={uploadReport}
@@ -833,15 +1117,12 @@ function MedicalReports({onBack}) {
               !selectedFile
             }
           >
-
             {loading
-              ? "Uploading and analyzing..."
+              ? "⏳ Uploading and analyzing..."
               : "📤 Upload Report"}
-
           </button>
 
         </section>
-
 
         {/* REPORTS */}
 
@@ -866,16 +1147,13 @@ function MedicalReports({onBack}) {
               onClick={loadUserAndReports}
               disabled={loadingReports}
             >
-
               🔄{" "}
               {loadingReports
                 ? "Loading..."
                 : "Refresh"}
-
             </button>
 
           </div>
-
 
           {loadingReports ? (
 
@@ -885,8 +1163,13 @@ function MedicalReports({onBack}) {
                 ⏳
               </div>
 
-              <p>
+              <h3>
                 Loading your reports...
+              </h3>
+
+              <p>
+                Please wait while we retrieve
+                your medical records.
               </p>
 
             </div>
@@ -925,24 +1208,31 @@ function MedicalReports({onBack}) {
                     📄
                   </div>
 
-
                   <div className="report-card-content">
 
-                    <h3>
-                      {report.file_name}
-                    </h3>
+                    <div className="report-card-heading">
 
+                      <div>
+                        <h3>
+                          {report.file_name}
+                        </h3>
 
-                    <p className="report-date">
+                        <p className="report-date">
+                          {report.created_at
+                            ? new Date(
+                                report.created_at
+                              ).toLocaleString()
+                            : "Unknown date"}
+                        </p>
+                      </div>
 
-                      {report.created_at
-                        ? new Date(
-                            report.created_at
-                          ).toLocaleString()
-                        : "Unknown date"}
+                      {report.ai_summary && (
+                        <span className="analysis-ready-badge">
+                          ✓ AI Ready
+                        </span>
+                      )}
 
-                    </p>
-
+                    </div>
 
                     {/* AI SUMMARY */}
 
@@ -950,19 +1240,17 @@ function MedicalReports({onBack}) {
 
                       <div className="summary-preview">
 
-                        <strong>
-                          🤖 AI Analysis Ready
-                        </strong>
+                        <div className="summary-preview-title">
+                          🤖 AI Analysis Available
+                        </div>
 
                         <p>
-
-                          {report.ai_summary.length > 250
+                          {report.ai_summary.length > 280
                             ? `${report.ai_summary.slice(
                                 0,
-                                250
+                                280
                               )}...`
                             : report.ai_summary}
-
                         </p>
 
                       </div>
@@ -971,8 +1259,20 @@ function MedicalReports({onBack}) {
 
                       <div className="pending-analysis">
 
-                        🤖 AI is analyzing
-                        this medical report...
+                        <span>
+                          🤖
+                        </span>
+
+                        <div>
+                          <strong>
+                            AI is analyzing this report
+                          </strong>
+
+                          <p>
+                            Please wait. This may take
+                            a few moments.
+                          </p>
+                        </div>
 
                       </div>
 
@@ -980,13 +1280,24 @@ function MedicalReports({onBack}) {
 
                       <div className="pending-analysis">
 
-                        🤖 AI analysis is
-                        not available yet.
+                        <span>
+                          ℹ️
+                        </span>
+
+                        <div>
+                          <strong>
+                            AI analysis is not available
+                          </strong>
+
+                          <p>
+                            You can try analyzing this
+                            report again.
+                          </p>
+                        </div>
 
                       </div>
 
                     )}
-
 
                     {/* ACTIONS */}
 
@@ -1001,20 +1312,18 @@ function MedicalReports({onBack}) {
                         👁️ View Report
                       </button>
 
-
                       {report.ai_summary && (
 
                         <button
                           onClick={() =>
                             setSelectedAnalysis(report)
                           }
-                          className="view-button"
+                          className="view-button analysis-button"
                         >
                           🤖 View AI Analysis
                         </button>
 
                       )}
-
 
                       {!report.ai_summary &&
                         analyzingReportId !==
@@ -1030,7 +1339,6 @@ function MedicalReports({onBack}) {
                           </button>
 
                         )}
-
 
                       <button
                         onClick={() =>
@@ -1057,7 +1365,6 @@ function MedicalReports({onBack}) {
 
       </div>
 
-
       {/* =====================================================
           FULL AI ANALYSIS MODAL
       ===================================================== */}
@@ -1065,105 +1372,60 @@ function MedicalReports({onBack}) {
       {selectedAnalysis && (
 
         <div
+          className="analysis-modal-overlay"
           onClick={() =>
             setSelectedAnalysis(null)
           }
-          style={{
-            position: "fixed",
-            inset: 0,
-            background:
-              "rgba(0, 0, 0, 0.55)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
         >
 
           <div
+            className="analysis-modal"
             onClick={(event) =>
               event.stopPropagation()
             }
-            style={{
-              width: "100%",
-              maxWidth: "850px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "30px",
-              boxSizing: "border-box",
-              boxShadow:
-                "0 20px 60px rgba(0,0,0,0.25)",
-            }}
           >
 
             {/* MODAL HEADER */}
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "20px",
-                marginBottom: "25px",
-              }}
-            >
+            <div className="analysis-modal-header">
 
-              <div>
+              <div className="analysis-modal-title">
 
-                <p
-                  className="section-label"
-                  style={{
-                    marginBottom: "6px",
-                  }}
-                >
-                  MEDISMART AI
-                </p>
+                <div className="analysis-modal-icon">
+                  🤖
+                </div>
 
-                <h2
-                  style={{
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  🤖 AI Medical Report Analysis
-                </h2>
+                <div>
 
-                <strong>
-                  {selectedAnalysis.file_name}
-                </strong>
+                  <p className="section-label">
+                    MEDISMART AI
+                  </p>
 
-                <p
-                  className="report-date"
-                  style={{
-                    marginTop: "6px",
-                  }}
-                >
-                  {selectedAnalysis.created_at
-                    ? new Date(
-                        selectedAnalysis.created_at
-                      ).toLocaleString()
-                    : "Unknown date"}
-                </p>
+                  <h2>
+                    Medical Report Analysis
+                  </h2>
+
+                  <strong>
+                    {selectedAnalysis.file_name}
+                  </strong>
+
+                  <p className="report-date">
+                    {selectedAnalysis.created_at
+                      ? new Date(
+                          selectedAnalysis.created_at
+                        ).toLocaleString()
+                      : "Unknown date"}
+                  </p>
+
+                </div>
 
               </div>
 
-
               <button
+                className="analysis-close-button"
                 onClick={() =>
                   setSelectedAnalysis(null)
                 }
-                style={{
-                  border: "none",
-                  background: "#f1f5f9",
-                  borderRadius: "50%",
-                  width: "40px",
-                  height: "40px",
-                  cursor: "pointer",
-                  fontSize: "18px",
-                  flexShrink: 0,
-                }}
                 aria-label="Close"
               >
                 ✕
@@ -1171,48 +1433,91 @@ function MedicalReports({onBack}) {
 
             </div>
 
+            {/* AI INTRO */}
 
-            {/* AI BADGE */}
+            <div className="analysis-intro">
 
-            <div
-              style={{
-                background:
-                  "linear-gradient(135deg, #eef2ff, #f0fdf4)",
-                borderRadius: "14px",
-                padding: "15px 18px",
-                marginBottom: "22px",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
+              <div className="analysis-intro-icon">
+                ✨
+              </div>
 
-              <strong>
-                ✨ AI-generated health information
-              </strong>
+              <div>
 
-              <p
-                style={{
-                  margin:
-                    "6px 0 0 0",
-                  lineHeight: "1.5",
-                }}
-              >
-                This analysis helps explain the
-                information contained in your report
-                in simpler language.
-              </p>
+                <strong>
+                  AI-generated health information
+                </strong>
+
+                <p>
+                  This analysis explains the information
+                  found in your medical report in simpler
+                  language.
+                </p>
+
+              </div>
 
             </div>
 
+            {/* QUICK INFO */}
+
+            <div className="analysis-info-grid">
+
+              <div className="analysis-info-card">
+
+                <span>
+                  📄
+                </span>
+
+                <div>
+                  <small>
+                    Report
+                  </small>
+
+                  <strong>
+                    Uploaded
+                  </strong>
+                </div>
+
+              </div>
+
+              <div className="analysis-info-card">
+
+                <span>
+                  🤖
+                </span>
+
+                <div>
+                  <small>
+                    Analysis
+                  </small>
+
+                  <strong>
+                    Completed
+                  </strong>
+                </div>
+
+              </div>
+
+            </div>
 
             {/* FULL AI RESPONSE */}
 
-            <div
-              style={{
-                fontSize: "15px",
-                color: "#334155",
-              }}
-            >
+            <div className="analysis-report-box">
+
+              <div className="analysis-report-heading">
+                <span>
+                  📋
+                </span>
+
+                <div>
+                  <strong>
+                    Report Explanation
+                  </strong>
+
+                  <small>
+                    AI-generated interpretation
+                  </small>
+                </div>
+              </div>
 
               {renderAIText(
                 selectedAnalysis.ai_summary
@@ -1220,53 +1525,37 @@ function MedicalReports({onBack}) {
 
             </div>
 
-
             {/* DISCLAIMER */}
 
-            <div
-              style={{
-                marginTop: "25px",
-                padding: "18px",
-                borderRadius: "12px",
-                background: "#fff7ed",
-                border:
-                  "1px solid #fed7aa",
-                lineHeight: "1.55",
-                fontSize: "14px",
-              }}
-            >
+            <div className="analysis-disclaimer">
 
-              <strong>
-                ⚠️ Important Medical Disclaimer
-              </strong>
+              <div className="analysis-disclaimer-icon">
+                ⚠️
+              </div>
 
-              <p
-                style={{
-                  marginBottom: 0,
-                }}
-              >
-                This AI-generated analysis is for
-                educational and informational purposes
-                only. It is not a medical diagnosis and
-                does not replace advice from a qualified
-                healthcare professional. Do not start,
-                stop, or change medication based only
-                on this AI response.
-              </p>
+              <div>
+
+                <strong>
+                  Important Medical Disclaimer
+                </strong>
+
+                <p>
+                  This AI-generated analysis is for
+                  educational and informational purposes
+                  only. It is not a medical diagnosis and
+                  does not replace advice from a qualified
+                  healthcare professional. Do not start,
+                  stop, or change medication based only
+                  on this AI response.
+                </p>
+
+              </div>
 
             </div>
 
-
             {/* MODAL ACTIONS */}
 
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-                marginTop: "25px",
-              }}
-            >
+            <div className="analysis-modal-actions">
 
               <button
                 className="view-button"
@@ -1279,7 +1568,6 @@ function MedicalReports({onBack}) {
                 📄 View Original Report
               </button>
 
-
               <button
                 className="delete-button"
                 onClick={() => {
@@ -1291,9 +1579,8 @@ function MedicalReports({onBack}) {
                 🗑️ Delete Report
               </button>
 
-
               <button
-                className="view-button"
+                className="close-analysis-button"
                 onClick={() =>
                   setSelectedAnalysis(null)
                 }
