@@ -429,9 +429,84 @@ const [editingPhone, setEditingPhone] = useState(false)
     session.user.email?.split('@')[0] ||
     'Patient'
 
-  const [activeFeature, setActiveFeature] = useState('home')
+  const [activeFeature, setActiveFeatureState] = useState('home')
 
   const [selectedDoctor, setSelectedDoctor] = useState(null)
+
+  /*
+   * Mobile/browser Back button support.
+   *
+   * Each dashboard feature gets its own browser-history entry.
+   * This means Android's built-in Back button moves between
+   * MediSmart pages instead of immediately leaving the app.
+   */
+  const setActiveFeature = (feature, doctorForHistory = selectedDoctor) => {
+    if (feature === activeFeature) {
+      return
+    }
+
+    window.history.pushState(
+      {
+        medismart: true,
+        feature,
+        selectedDoctor:
+          feature === 'appointment' ? doctorForHistory : null,
+      },
+      '',
+      window.location.href
+    )
+
+    setActiveFeatureState(feature)
+
+    if (feature !== 'appointment') {
+      setSelectedDoctor(null)
+    }
+  }
+
+  useEffect(() => {
+    // Keep the current page inside the browser history.
+    window.history.replaceState(
+      {
+        medismart: true,
+        feature: 'home',
+        selectedDoctor: null,
+      },
+      '',
+      window.location.href
+    )
+
+    const handleBrowserBack = (event) => {
+      const state = event.state
+
+      // If the history entry belongs to MediSmart, show that page.
+      if (state?.medismart) {
+        setActiveFeatureState(state.feature || 'home')
+        setSelectedDoctor(state.selectedDoctor || null)
+        return
+      }
+
+      // If the browser has reached the first entry for this app,
+      // stay on the dashboard instead of immediately leaving.
+      setActiveFeatureState('home')
+      setSelectedDoctor(null)
+
+      window.history.pushState(
+        {
+          medismart: true,
+          feature: 'home',
+          selectedDoctor: null,
+        },
+        '',
+        window.location.href
+      )
+    }
+
+    window.addEventListener('popstate', handleBrowserBack)
+
+    return () => {
+      window.removeEventListener('popstate', handleBrowserBack)
+    }
+  }, [])
 
   // Load the current user's role from the profiles table.
   // Only users with role = "admin" can see/access the Admin Panel.
@@ -478,7 +553,7 @@ const [editingPhone, setEditingPhone] = useState(false)
 
   const openAppointment = (doctor) => {
     setSelectedDoctor(doctor)
-    setActiveFeature('appointment')
+    setActiveFeature('appointment', doctor)
   }
 
   const backToDoctors = () => {
